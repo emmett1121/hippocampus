@@ -149,14 +149,21 @@ func (s *RedisStore) ensureIndex(ctx context.Context) {
 func (s *RedisStore) Put(ctx context.Context, entry Entry) error {
 	key := entryPrefix + entry.ID
 	tagsStr := strings.Join(entry.Tags, ",")
+	timestamp := entry.Timestamp.Unix()
+
+	// Compute content_hash at write time — the single source of integrity truth.
+	// Every write (new or overwrite) gets a fresh hash. FAILED means someone
+	// bypassed Put() and wrote directly to Redis.
+	contentHash := ComputeContentHash(entry.ID, entry.Content, fmt.Sprintf("%d", timestamp))
 
 	pipe := s.client.Pipeline()
 
 	pipe.HSet(ctx, key, map[string]interface{}{
-		"id":        entry.ID,
-		"content":   entry.Content,
-		"tags":      tagsStr,
-		"timestamp": entry.Timestamp.Unix(),
+		"id":           entry.ID,
+		"content":      entry.Content,
+		"tags":         tagsStr,
+		"timestamp":    timestamp,
+		"content_hash": contentHash,
 	})
 
 	pipe.ZAdd(ctx, timelineKey, redis.Z{

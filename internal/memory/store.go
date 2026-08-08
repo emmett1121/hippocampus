@@ -74,6 +74,10 @@ type Store interface {
 	// plus the target itself, all in chronological order.
 	SessionContext(ctx context.Context, id string, before, after int) ([]Entry, error)
 
+	// VerifyAttestation performs deep TSA chain verification for a single entry:
+	// recomputes content hash, validates Merkle path, parses TSR, verifies X.509 chain.
+	VerifyAttestation(ctx context.Context, entryID string) (*AttestationResult, error)
+
 	// VerifyEntry checks the integrity of a single entry by comparing its stored
 	// content_hash against a freshly computed hash. Populates entry.Integrity.
 	VerifyEntry(ctx context.Context, entry *Entry)

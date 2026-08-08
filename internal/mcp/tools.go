@@ -483,6 +483,28 @@ func toolDefinitions() []Tool {
 				"required": []string{"id"},
 			}),
 		},
+		{
+			Name:        "memory_verify_attestation",
+			Description: "Deep TSA chain verification for a single entry. Recomputes content hash, validates Merkle path from leaf to root, parses the RFC 3161 TSR, and verifies the X.509 certificate chain. Use when you want cryptographic proof that a memory existed at the claimed time and hasn't been tampered with. More expensive than the fast hash check — use on-demand, not on every read.",
+			InputSchema: mustJSON(map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"id": map[string]interface{}{
+						"type":        "string",
+						"description": "Entry ID to verify. Can also be a TSA block ID (tsa:*) to verify the block itself.",
+					},
+				},
+				"required": []string{"id"},
+			}),
+		},
+		{
+			Name:        "memory_clock",
+			Description: "Returns the current time as both Unix epoch seconds and RFC 3339 formatted string. Use to check elapsed time during long-running operations like pacemaker cycles.",
+			InputSchema: mustJSON(map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			}),
+		},
 	}
 }
 
