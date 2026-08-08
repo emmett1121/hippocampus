@@ -204,6 +204,10 @@ func (s *Server) dispatchTool(ctx context.Context, params CallToolParams) (CallT
 		return s.toolSummaryLeaves(ctx, params.Arguments)
 	case "memory_session_context":
 		return s.toolSessionContext(ctx, params.Arguments)
+	case "memory_verify_attestation":
+		return s.toolVerifyAttestation(ctx, params.Arguments)
+	case "memory_clock":
+		return s.toolClock()
 	default:
 		return CallToolResult{}, fmt.Errorf("unknown tool: %s", params.Name)
 	}
@@ -795,6 +799,30 @@ func (s *Server) toolGetSection(ctx context.Context, args map[string]interface{}
 
 	return CallToolResult{
 		Content: []ContentBlock{{Type: "text", Text: entry.Content}},
+	}, nil
+}
+
+func (s *Server) toolClock() (CallToolResult, error) {
+	now := time.Now()
+	return CallToolResult{
+		Content: []ContentBlock{{Type: "text", Text: fmt.Sprintf(`{"unix":%d,"rfc3339":"%s"}`, now.Unix(), now.Format(time.RFC3339))}},
+	}, nil
+}
+
+func (s *Server) toolVerifyAttestation(ctx context.Context, args map[string]interface{}) (CallToolResult, error) {
+	id, _ := args["id"].(string)
+	if id == "" {
+		return CallToolResult{}, fmt.Errorf("id is required")
+	}
+
+	result, err := s.store.VerifyAttestation(ctx, id)
+	if err != nil {
+		return CallToolResult{}, err
+	}
+
+	data, _ := json.Marshal(result)
+	return CallToolResult{
+		Content: []ContentBlock{{Type: "text", Text: string(data)}},
 	}, nil
 }
 

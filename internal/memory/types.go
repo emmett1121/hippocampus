@@ -18,7 +18,7 @@ type Entry struct {
 	Content   string    `json:"content"`
 	Tags      []string  `json:"tags"`
 	Weight    float64   `json:"weight,omitempty"`    // Confidence weight: 0.0-1.0
-	Integrity string   `json:"integrity,omitempty"` // "verified", "unattested", or "FAILED"
+	Integrity string   `json:"integrity,omitempty"` // "verified", "unattested", or "modified"
 }
 
 // SearchResult wraps an entry with a relevance score.

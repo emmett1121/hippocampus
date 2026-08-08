@@ -97,11 +97,6 @@ func hashBackfill(ctx context.Context, rdb *redis.Client) int {
 		default:
 		}
 
-		// Skip meta/summary entries (not IP-relevant)
-		if strings.HasPrefix(id, "meta:") || strings.HasPrefix(id, "summary:") {
-			continue
-		}
-
 		// Check if already has content_hash
 		existing, _ := rdb.HGet(ctx, "entry:"+id, "content_hash").Result()
 		if existing != "" {
@@ -140,10 +135,6 @@ func merkleStamp(ctx context.Context, rdb *redis.Client, tsaURL string, batchSiz
 
 	var unstamped []string
 	for _, id := range ids {
-		if strings.HasPrefix(id, "meta:") || strings.HasPrefix(id, "summary:") {
-			continue
-		}
-
 		// Must have content_hash
 		hash, _ := rdb.HGet(ctx, "entry:"+id, "content_hash").Result()
 		if hash == "" {

@@ -9,15 +9,24 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"strings"
 )
 
 // IntegrityStatus constants for Entry.Integrity field.
 const (
 	IntegrityVerified   = "verified"   // content_hash matches recomputed hash
 	IntegrityUnattested = "unattested" // no content_hash stored yet
-	IntegrityFailed     = "FAILED"     // content_hash does NOT match — possible tampering
+	IntegrityModified   = "modified"   // content_hash does NOT match — entry was edited outside normal write path
 )
+
+// ComputeContentHash computes the canonical SHA-256 hash for an entry.
+// Algorithm: SHA-256(id + "\n" + content + "\n" + timestamp)
+// This is the single source of truth for hash computation — used by Put() on write,
+// VerifyEntryIntegrity on read, and the daemon's backfill for historical entries.
+func ComputeContentHash(id, content, timestamp string) string {
+	hashInput := fmt.Sprintf("%s\n%s\n%s", id, content, timestamp)
+	computed := sha256.Sum256([]byte(hashInput))
+	return hex.EncodeToString(computed[:])
+}
 
 // VerifyEntryIntegrity checks a single entry's content_hash against its current content.
 // Returns the integrity status string. Requires the raw Redis hash data (including content_hash field).
@@ -26,27 +35,18 @@ func VerifyEntryIntegrity(id, content, timestamp, storedHash string) string {
 		return IntegrityUnattested
 	}
 
-	// Recompute: SHA-256(id + "\n" + content + "\n" + timestamp)
-	// Must match the algorithm in cmd/daemon/tsa.go hashBackfill()
-	hashInput := fmt.Sprintf("%s\n%s\n%s", id, content, timestamp)
-	computed := sha256.Sum256([]byte(hashInput))
-	computedHex := hex.EncodeToString(computed[:])
+	computedHex := ComputeContentHash(id, content, timestamp)
 
 	if computedHex == storedHash {
 		return IntegrityVerified
 	}
-	return IntegrityFailed
+	return IntegrityModified
 }
 
 // VerifyEntry checks integrity for an entry using the store's Redis client.
 // Populates the entry's Integrity field in place.
 func (s *RedisStore) VerifyEntry(ctx context.Context, entry *Entry) {
 	if entry == nil || entry.ID == "" {
-		return
-	}
-
-	// Skip meta/summary entries (never hashed by design)
-	if strings.HasPrefix(entry.ID, "meta:") || strings.HasPrefix(entry.ID, "summary:") {
 		return
 	}
 
