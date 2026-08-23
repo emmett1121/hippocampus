@@ -353,24 +353,8 @@ func (a *App) DeleteTag(tag string) error {
 	return err
 }
 
-// Reset deletes all memory data (requires confirmation from frontend).
-func (a *App) Reset() error {
-	if a.redisClient == nil {
-		return fmt.Errorf("not connected to Redis")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := a.redisClient.FlushDB(ctx).Err(); err != nil {
-		return err
-	}
-
-	// Re-seed orientation entries so the hook has something to inject
-	a.seedOrientationIfNeeded()
-
-	return nil
-}
+// Reset removed — FLUSHDB is not something that should be one click away.
+// If you need to nuke the database, you know where redis-cli is.
 
 // Backup exports all memory entries as a JSON file.
 // Pops up a native save dialog for the user to choose location and filename.

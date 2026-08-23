@@ -36,7 +36,14 @@ type Config struct {
 	OFC           OFCConfig           `json:"ofc"`
 	Epistemic     EpistemicConfig     `json:"epistemic"`
 	Daemon        DaemonConfig        `json:"daemon"`
+	PubMed        PubMedConfig        `json:"pubmed"`
 	Author        string              `json:"author"` // Attribution tag for multi-user (e.g. "alice"). Empty = no attribution.
+}
+
+// PubMedConfig holds NCBI E-utilities (PubMed) API settings.
+type PubMedConfig struct {
+	APIKey string `json:"api_key,omitempty"` // NCBI API key (free, from ncbi.nlm.nih.gov/account)
+	Email  string `json:"email,omitempty"`   // Contact email (required by NCBI usage policy)
 }
 
 // RedisConfig holds Redis/Valkey connection settings.
