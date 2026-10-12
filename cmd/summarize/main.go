@@ -411,6 +411,7 @@ func wipeSummaries(ctx context.Context, client *redis.Client, tracks []string) {
 		}
 		client.Del(ctx, entryPrefix+id)
 		client.ZRem(ctx, timelineKey, id)
+		client.Do(ctx, "VREM", "hippocampus:vectors", id) // the daemon embeds summaries too
 		deleted++
 	}
 
@@ -1342,6 +1343,7 @@ func runWipeSummaries(ctx context.Context, client *redis.Client, dryRun bool) {
 		}
 		client.Del(ctx, key)
 		client.ZRem(ctx, timelineKey, id)
+		client.Do(ctx, "VREM", "hippocampus:vectors", id)
 	}
 
 	slog.Info("deleted summaries, run --backfill to regenerate", "count", len(summaryIDs))

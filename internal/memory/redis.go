@@ -234,6 +234,10 @@ func (s *RedisStore) Delete(ctx context.Context, id string) error {
 	// Clean up links (both old ZSET and new HASH formats)
 	pipe.Del(ctx, linkPrefix+id)
 	pipe.Del(ctx, "links:"+id)
+	// Remove the entry's embedding too: a vector left behind keeps matching in VSIM and comes back from Search as a
+	// result with no content, taking one of the limit slots. VREM answers 0 for a missing key or element, so this is
+	// safe for entries that were never embedded.
+	pipe.Do(ctx, "VREM", vectorKey, id)
 
 	_, err = pipe.Exec(ctx)
 	return err
@@ -278,15 +282,20 @@ func (s *RedisStore) Search(ctx context.Context, query string, limit int) ([]Sea
 	// Deduplicate (prefer higher score)
 	allResults = dedupeSearchResults(allResults)
 
-	// Hydrate entries that only have IDs (from VSIM)
-	for i := range allResults {
-		if allResults[i].Entry.Content == "" && allResults[i].Entry.ID != "" {
-			entry, err := s.Get(ctx, allResults[i].Entry.ID)
-			if err == nil {
-				allResults[i].Entry = entry
+	// Hydrate entries that only have IDs (from VSIM). A VSIM hit whose entry no longer exists (a vector orphaned by a
+	// delete made before Delete removed vectors) is dropped rather than returned with empty content.
+	hydrated := allResults[:0]
+	for _, r := range allResults {
+		if r.Entry.Content == "" && r.Entry.ID != "" {
+			entry, err := s.Get(ctx, r.Entry.ID)
+			if err != nil {
+				continue
 			}
+			r.Entry = entry
 		}
+		hydrated = append(hydrated, r)
 	}
+	allResults = hydrated
 
 	// Sort by score descending
 	for i := 1; i < len(allResults); i++ {

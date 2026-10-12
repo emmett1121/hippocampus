@@ -753,6 +753,7 @@ func entryDelete(ctx context.Context, rdb *redis.Client, args []string) {
 		pipe.SRem(ctx, tagPrefix+tag, id)
 	}
 	pipe.Del(ctx, linkPrefix+id)
+	pipe.Do(ctx, "VREM", "hippocampus:vectors", id) // the embedding goes with the entry
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		fatalf("Error deleting: %v\n", err)
@@ -1514,6 +1515,7 @@ func summaryDelete(ctx context.Context, rdb *redis.Client, args []string) {
 
 	// Remove any links referencing this entry
 	pipe.Del(ctx, "links:"+id)
+	pipe.Do(ctx, "VREM", "hippocampus:vectors", id) // and its embedding
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		fatalf("Error deleting summary: %v\n", err)
@@ -1601,6 +1603,7 @@ func summaryWipe(ctx context.Context, rdb *redis.Client, args []string) {
 			pipe.SRem(ctx, tagPrefix+tag, id)
 		}
 		pipe.Del(ctx, linkPrefix+id)
+		pipe.Do(ctx, "VREM", "hippocampus:vectors", id) // the embedding goes with the entry
 		if _, err := pipe.Exec(ctx); err != nil {
 			continue
 		}
@@ -1957,6 +1960,7 @@ func orientationDelete(ctx context.Context, rdb *redis.Client, args []string) {
 		pipe.SRem(ctx, tagPrefix+tag, id)
 	}
 	pipe.Del(ctx, linkPrefix+id)
+	pipe.Do(ctx, "VREM", "hippocampus:vectors", id) // the embedding goes with the entry
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		fatalf("Error deleting: %v\n", err)
